@@ -68,14 +68,15 @@
     
     .info-box { background: var(--input-bg); border: 1px solid var(--border); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; }
 
-    /* Countdown and minute-track styles */
+    /* Countdown and minute-track styles: wider and accumulating progress bar */
     .minute-track-container { width: 100%; margin: 12px 0 8px 0; }
-    .minute-track { position: relative; height: 14px; border-radius: 8px; overflow: hidden; background: #0b1220; border: 1px solid var(--border); }
-    .minute-segment { height: 100%; float: left; }
-    .segment-1 { background: var(--primary); width: 33.3333%; }
-    .segment-2 { background: var(--success); width: 33.3333%; }
-    .segment-3 { background: var(--danger); width: 33.3333%; }
-    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px; border-radius: 50%; background: white; border: 2px solid rgba(0,0,0,0.4); box-shadow: 0 0 6px rgba(0,0,0,0.6); }
+    .minute-track { position: relative; height: 22px; border-radius: 12px; overflow: hidden; background: #0b1220; border: 1px solid var(--border); }
+    .minute-progress { position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+        /* Gradient with thirds: 0-20s blue, 20-40s green, 40-60s red */
+        background: linear-gradient(90deg, var(--primary) 0 33.3333%, var(--success) 33.3333% 66.6666%, var(--danger) 66.6666% 100%);
+        transition: width 0.2s linear;
+    }
+    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #ffffffcc; border: 2px solid rgba(0,0,0,0.4); box-shadow: 0 0 6px rgba(0,0,0,0.6); }
 
     #countdown { font-size: 28px; color: var(--text-muted); margin-top: 6px; }
 
@@ -131,12 +132,10 @@
         <div id="activityText">- - -</div> <!-- Sem skočí text např. "Jízda vlakem" -->
         <div id="fileName">Načítám data ze serveru...</div>
 
-        <!-- Minute track (kolorované segmenty) -->
+        <!-- Minute track: accumulating progress bar with three-color gradient -->
         <div class="minute-track-container">
             <div class="minute-track" id="minuteTrack">
-                <div class="minute-segment segment-1"></div>
-                <div class="minute-segment segment-2"></div>
-                <div class="minute-segment segment-3"></div>
+                <div id="minuteProgress" class="minute-progress" style="width:0%"></div>
                 <div id="minuteIndicator" class="minute-indicator" style="left:0%"></div>
             </div>
         </div>
@@ -225,6 +224,7 @@ playlistSelect.addEventListener('change', (e) => {
     const fileNameDiv = document.getElementById('fileName');
     const countdownDiv = document.getElementById('countdown');
     const minuteIndicator = document.getElementById('minuteIndicator');
+    const minuteProgress = document.getElementById('minuteProgress');
 
     // Back click tracking
     let backClickCount = 0;
@@ -344,8 +344,8 @@ statusDiv.innerText = "Program dokončen";
 activityTextDiv.innerText = "Konec programu";  
 fileNameDiv.innerText = "Hodinový cyklus úspěšně skončil.";  
 countdownDiv.innerText = "00:00";  
-minuteIndicator.style.left = '0%';
-progressBar && (progressBar.style.width = "0%");
+if (minuteIndicator) minuteIndicator.style.left = '0%';
+if (minuteProgress) minuteProgress.style.width = '0%';
 currentMinute = 1;  
 minuteInput.value = 1;  
 localStorage.removeItem(MINUTE_STORAGE_KEY);  
@@ -392,7 +392,7 @@ fileNameDiv.innerText = `Chyba: Soubor "${currentFileName}" chybí ve složce au
 targetEndTime = Date.now() + (MINUTE_DURATION_SEC * 1000);  
 secondsLeft = MINUTE_DURATION_SEC;
 
-// hide the small bottom countdown (we show seconds in status)
+// hide the small bottom countdown (we show seconds in status) 
 if (countdownDiv) countdownDiv.style.display = 'none';
 
 updateDisplay();  
@@ -423,6 +423,7 @@ statusDiv.innerText = `${playingMinute}. min / ${displaySec}`;
 const elapsed = MINUTE_DURATION_SEC - (displaySecVal);
 const leftPercent = Math.min(100, Math.max(0, (elapsed / MINUTE_DURATION_SEC) * 100));
 if (minuteIndicator) minuteIndicator.style.left = `${leftPercent}%`;
+if (minuteProgress) minuteProgress.style.width = `${leftPercent}%`;
 }
 
 toggleEditorBtn.addEventListener('click', async () => {  
@@ -561,6 +562,10 @@ function stopPlayback() {
     if (countdownDiv) { countdownDiv.style.display = 'block'; countdownDiv.innerText = 'Pauza'; }
     updateNextFilePreview();
 
+    // reset progress bar and indicator
+    if (minuteIndicator) minuteIndicator.style.left = `${Math.min(100, Math.max(0, ((MINUTE_DURATION_SEC - secondsLeft) / MINUTE_DURATION_SEC) * 100))}%`;
+    if (minuteProgress) minuteProgress.style.width = `${Math.min(100, Math.max(0, ((MINUTE_DURATION_SEC - secondsLeft) / MINUTE_DURATION_SEC) * 100))}%`;
+
     // update toggle UI
     isPlaying = false;
     playToggle.classList.remove('playing');
@@ -581,6 +586,7 @@ statusDiv.innerText = "Moje pozice resetována";
 updateNextFilePreview();  
 // reset indicator and show small countdown
 if (minuteIndicator) minuteIndicator.style.left = '0%';
+if (minuteProgress) minuteProgress.style.width = '0%';
 if (countdownDiv) { countdownDiv.style.display = 'block'; countdownDiv.innerText = '00:00'; }
 });
     async function saveMinuteToServer() {

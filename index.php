@@ -72,7 +72,7 @@
         background: var(--primary); /* single color; switched in JS at thresholds */
         transition: width 0.2s linear, background-color 0.18s linear;
     }
-    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #ffffffcc; border: 2px solid rgba(0,0,0,0.4); box-shadow: 0 0 6px rgba(0,0,0,0.6); }
+    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #ffffffcc; border: 2px solid rgba(0,0,0,0.4); box[...]
 
     #countdown { font-size: 28px; color: var(--text-muted); margin-top: 6px; }
 
@@ -166,6 +166,14 @@
 
    </div>
 
+<!-- Nový listbox pro výběr minuty podle obsahu playlistu -->
+<div class="setup-box">
+    <label for="minuteJumpSelect">Přejít na minutu (podle playlistu):</label>
+    <select id="minuteJumpSelect" class="select-audio">
+        <option value="">Načítám...</option>
+    </select>
+</div>
+
 <script>
     const MINUTE_DURATION_SEC = 60; 
     const MINUTE_STORAGE_KEY = 'looper_current_minute_text_v1'; 
@@ -221,6 +229,7 @@ playlistSelect.addEventListener('change', (e) => {
     const countdownDiv = document.getElementById('countdown');
     const minuteIndicator = document.getElementById('minuteIndicator');
     const minuteProgress = document.getElementById('minuteProgress');
+    const minuteJumpSelect = document.getElementById('minuteJumpSelect');
 
     // Back click tracking
     let backClickCount = 0;
@@ -276,9 +285,48 @@ function loadPlaylistFromServer() {
         statusDiv.innerText = `Synchronizováno: ${currentPlaylistFileName}`;
         updateNextFilePreview();
         buildEditorUI();
+        populateMinuteJumpSelect();
     });
 }
 
+// Nová funkce: naplní select minutami podle obsahu playlistu
+function populateMinuteJumpSelect() {
+    if (!minuteJumpSelect) return;
+    minuteJumpSelect.innerHTML = '';
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.innerText = 'Vyber minutu...';
+    defaultOpt.disabled = true;
+    defaultOpt.selected = true;
+    minuteJumpSelect.appendChild(defaultOpt);
+
+    for (let i = 0; i < 60; i++) {
+        const item = playlist[i] || { file: '', text: '' };
+        const minuteNumber = i + 1;
+        const fileLabel = item.file ? item.file : '(prázdné)';
+        const textLabel = item.text ? `| ${item.text}` : '';
+        const option = document.createElement('option');
+        option.value = String(minuteNumber);
+        option.textContent = `${minuteNumber}. minuta — ${fileLabel} ${textLabel}`;
+        // zvýraznit ne-prázdné možnosti
+        if (item.file) option.style.fontWeight = '700';
+        minuteJumpSelect.appendChild(option);
+    }
+}
+
+// Přepni aktuální minutu při změně v novém selectu
+minuteJumpSelect.addEventListener('change', (e) => {
+    const val = parseInt(e.target.value, 10);
+    if (!isFinite(val)) return;
+    minuteInput.value = val;
+    currentMinute = val;
+    updateNextFilePreview();
+    // pokud právě přehráváme, přejdeme okamžitě na zvolenou minutu
+    if (isPlaying) {
+        // playCurrentMinute vezme currentMinute a potom inkrementuje
+        playCurrentMinute();
+    }
+});
 
 
 // Vygenerování 60 řádků: každá minuta má Select a pod ním Input pro text  
@@ -309,7 +357,7 @@ function buildEditorUI() {
         const playBtn = document.createElement('button');  
         playBtn.className = 'btn-play';  
         playBtn.innerText = '▶️';  
-        playBtn.onclick = (e) => { e.preventDefault(); playPreview(select.value); };  
+        playBtn.onclick = (e) => { e.preventDefault(); playPreview(select.value); };
         rowHeader.appendChild(label);  
         rowHeader.appendChild(select);  
         rowHeader.appendChild(playBtn);
@@ -353,7 +401,7 @@ lastStartedMinute = currentMinute;
 
 let currentItem = playlist[currentMinute - 1];  
 let currentFileName = currentItem && currentItem.file ? currentItem.file.trim() : "";  
-let currentText = currentItem && currentItem.text ? currentItem.text.trim() : "";  
+let currentText = currentItem && currentItem.text ? currentItem.text.trim() : "";
 let isUsingFallback = false;
 
 if (currentFileName === "") {  

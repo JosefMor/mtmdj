@@ -68,8 +68,16 @@
     
     .info-box { background: var(--input-bg); border: 1px solid var(--border); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; }
 
-    #countdown { font-size: 32px; color: var(--text-muted); }
-    
+    /* Countdown and minute-track styles */
+    .minute-track-container { width: 100%; margin: 12px 0 8px 0; }
+    .minute-track { position: relative; height: 14px; border-radius: 8px; overflow: hidden; background: #0b1220; border: 1px solid var(--border); }
+    .minute-segment { height: 100%; float: left; }
+    .segment-1 { background: var(--primary); width: 33.3333%; }
+    .segment-2 { background: var(--success); width: 33.3333%; }
+    .segment-3 { background: var(--danger); width: 33.3333%; }
+    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 12px; height: 12px; border-radius: 50%; background: white; border: 2px solid rgba(0,0,0,0.4); box-shadow: 0 0 6px rgba(0,0,0,0.6); }
+
+    #countdown { font-size: 28px; color: var(--text-muted); margin-top: 6px; }
 
     #status { font-size: 40px; font-weight: bold; margin-bottom: 10px; }
     #activityText { font-size: 48px; font-weight: 800; color: #f8fafc; margin: 15px 0; }
@@ -122,10 +130,18 @@
         <div id="status">Aktuální stav</div>
         <div id="activityText">- - -</div> <!-- Sem skočí text např. "Jízda vlakem" -->
         <div id="fileName">Načítám data ze serveru...</div>
-        <div id="countdown">00:00</div>
-        <div class="progress-container">
-            <div id="progressBar"></div>
+
+        <!-- Minute track (kolorované segmenty) -->
+        <div class="minute-track-container">
+            <div class="minute-track" id="minuteTrack">
+                <div class="minute-segment segment-1"></div>
+                <div class="minute-segment segment-2"></div>
+                <div class="minute-segment segment-3"></div>
+                <div id="minuteIndicator" class="minute-indicator" style="left:0%"></div>
+            </div>
         </div>
+
+        <div id="countdown">00:00 /</div>
     </div>
 
     <!-- INTERAKTIVNÍ PANEL SEZNAMU -->
@@ -208,7 +224,7 @@ playlistSelect.addEventListener('change', (e) => {
     const activityTextDiv = document.getElementById('activityText');
     const fileNameDiv = document.getElementById('fileName');
     const countdownDiv = document.getElementById('countdown');
-    const progressBar = document.getElementById('progressBar');
+    const minuteIndicator = document.getElementById('minuteIndicator');
 
     // Back click tracking
     let backClickCount = 0;
@@ -394,8 +410,13 @@ updateDisplay();
 function updateDisplay() {  
 const displaySecVal = secondsLeft < 0 ? 0 : secondsLeft;  
 const displaySec = displaySecVal < 10 ? `0${displaySecVal}` : displaySecVal;  
-countdownDiv.innerText = `00:${displaySec}`;  
-progressBar.style.width = `${(displaySecVal / MINUTE_DURATION_SEC) * 100}%`;  
+// show seconds with trailing slash (no total needed)
+countdownDiv.innerText = `00:${displaySec} /`;
+
+// update minute indicator position (elapsed seconds from 0..60)
+const elapsed = MINUTE_DURATION_SEC - (displaySecVal);
+const leftPercent = Math.min(100, Math.max(0, (elapsed / MINUTE_DURATION_SEC) * 100));
+if (minuteIndicator) minuteIndicator.style.left = `${leftPercent}%`;
 }
 
 toggleEditorBtn.addEventListener('click', async () => {  
@@ -552,7 +573,7 @@ minuteInput.value = 1;
 statusDiv.innerText = "Moje pozice resetována";  
 updateNextFilePreview();  
 countdownDiv.innerText = "00:00";  
-progressBar.style.width = "0%";  
+minuteIndicator.style.left = '0%';
 });
     async function saveMinuteToServer() {
         try {

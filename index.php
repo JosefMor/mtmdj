@@ -31,11 +31,8 @@
     /* Grid layout pro řádky editoru */
 
     .playlist-row { 
-
         display: flex; 
-
         flex-direction: column; 
-
         align-items: stretch; 
         gap: 15px; 
         padding: 8px; 
@@ -72,9 +69,8 @@
     .minute-track-container { width: 100%; margin: 12px 0 8px 0; }
     .minute-track { position: relative; height: 22px; border-radius: 12px; overflow: hidden; background: #0b1220; border: 1px solid var(--border); }
     .minute-progress { position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-        /* Gradient with thirds: 0-20s blue, 20-40s green, 40-60s red */
-        background: linear-gradient(90deg, var(--primary) 0 33.3333%, var(--success) 33.3333% 66.6666%, var(--danger) 66.6666% 100%);
-        transition: width 0.2s linear;
+        background: var(--primary); /* single color; switched in JS at thresholds */
+        transition: width 0.2s linear, background-color 0.18s linear;
     }
     .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #ffffffcc; border: 2px solid rgba(0,0,0,0.4); box-shadow: 0 0 6px rgba(0,0,0,0.6); }
 
@@ -132,7 +128,7 @@
         <div id="activityText">- - -</div> <!-- Sem skočí text např. "Jízda vlakem" -->
         <div id="fileName">Načítám data ze serveru...</div>
 
-        <!-- Minute track: accumulating progress bar with three-color gradient -->
+        <!-- Minute track: accumulating progress bar with single color that switches in JS -->
         <div class="minute-track-container">
             <div class="minute-track" id="minuteTrack">
                 <div id="minuteProgress" class="minute-progress" style="width:0%"></div>
@@ -423,7 +419,28 @@ statusDiv.innerText = `${playingMinute}. min / ${displaySec}`;
 const elapsed = MINUTE_DURATION_SEC - (displaySecVal);
 const leftPercent = Math.min(100, Math.max(0, (elapsed / MINUTE_DURATION_SEC) * 100));
 if (minuteIndicator) minuteIndicator.style.left = `${leftPercent}%`;
-if (minuteProgress) minuteProgress.style.width = `${leftPercent}%`;
+if (minuteProgress) {
+    minuteProgress.style.width = `${leftPercent}%`;
+    // set single solid color depending on elapsed thresholds
+    try {
+        const rootStyles = getComputedStyle(document.documentElement);
+        const primary = rootStyles.getPropertyValue('--primary').trim() || '#38bdf8';
+        const success = rootStyles.getPropertyValue('--success').trim() || '#22c55e';
+        const danger = rootStyles.getPropertyValue('--danger').trim() || '#ef4444';
+        if (elapsed < 20) {
+            minuteProgress.style.backgroundColor = primary;
+        } else if (elapsed < 40) {
+            minuteProgress.style.backgroundColor = success;
+        } else {
+            minuteProgress.style.backgroundColor = danger;
+        }
+    } catch (e) {
+        // fallback colors
+        if (elapsed < 20) minuteProgress.style.backgroundColor = '#38bdf8';
+        else if (elapsed < 40) minuteProgress.style.backgroundColor = '#22c55e';
+        else minuteProgress.style.backgroundColor = '#ef4444';
+    }
+}
 }
 
 toggleEditorBtn.addEventListener('click', async () => {  

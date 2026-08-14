@@ -62,6 +62,9 @@
     .btn-toggle { grid-column: span 2; font-size: 18px; padding: 16px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; color: white; }
     .btn-toggle.stopped { background-color: var(--success); }
     .btn-toggle.playing { background-color: var(--danger); }
+
+    /* Back button style */
+    .btn-back { background: #334155; color: white; }
     
     .info-box { background: var(--input-bg); border: 1px solid var(--border); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; }
 
@@ -105,6 +108,7 @@
     
     <div class="controls">
         <button id="playToggle" class="btn btn-toggle stopped" aria-pressed="false" type="button">Spustit přehrávání</button>
+        <button id="backBtn" class="btn btn-back" disabled>Zpět</button>
         <button id="nextBtn" class="btn btn-next" disabled>Vpřed (Next)</button>
     </div>
     
@@ -189,6 +193,7 @@ playlistSelect.addEventListener('change', (e) => {
     let isPlaying = false; // nový stav přehrávání
     // DOM Prvky
     const playToggle = document.getElementById('playToggle');
+    const backBtn = document.getElementById('backBtn');
     const nextBtn = document.getElementById('nextBtn');
     const toggleEditorBtn = document.getElementById('toggleEditorBtn');
     const editorContainer = document.getElementById('editorContainer');
@@ -452,6 +457,7 @@ playToggle.addEventListener('click', () => {
         playToggle.textContent = 'Zastavit';
 
         nextBtn.disabled = false;
+        backBtn.disabled = false;
         minuteInput.disabled = true;
         toggleEditorBtn.disabled = true;
 
@@ -463,6 +469,20 @@ playToggle.addEventListener('click', () => {
     }
 });
 
+// Back button: restart current minute to its beginning
+backBtn.addEventListener('click', () => {
+    if (!isPlaying) return;
+    // If audio exists, restart it to the beginning of the current minute
+    if (audio) {
+        try { audio.currentTime = 0; } catch (e) { console.warn('Cannot reset currentTime', e); }
+        audio.play().catch(() => {});
+    }
+    // reset timer for the full minute
+    targetEndTime = Date.now() + (MINUTE_DURATION_SEC * 1000);
+    secondsLeft = MINUTE_DURATION_SEC;
+    updateDisplay();
+});
+
 function stopPlayback() {
     // stop interval and audio
     if (countdownInterval) {
@@ -472,6 +492,7 @@ function stopPlayback() {
     if (audio) audio.pause();
 
     nextBtn.disabled = true;
+    backBtn.disabled = true;
     minuteInput.disabled = false;
     toggleEditorBtn.disabled = false;
 

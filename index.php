@@ -58,6 +58,11 @@
     .btn-next { background-color: var(--primary); color: #000; }
     .btn-stop { background-color: var(--danger); color: white; }
     
+    /* Toggle button style */
+    .btn-toggle { grid-column: span 2; font-size: 18px; padding: 16px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; color: white; }
+    .btn-toggle.stopped { background-color: var(--success); }
+    .btn-toggle.playing { background-color: var(--danger); }
+    
     .info-box { background: var(--input-bg); border: 1px solid var(--border); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; }
 
     #countdown { font-size: 32px; color: var(--text-muted); }
@@ -99,9 +104,8 @@
     </div>
     
     <div class="controls">
-        <button id="startBtn" class="btn btn-start">Spustit přehrávání</button>
+        <button id="playToggle" class="btn btn-toggle stopped" aria-pressed="false" type="button">Spustit přehrávání</button>
         <button id="nextBtn" class="btn btn-next" disabled>Vpřed (Next)</button>
-        <button id="stopBtn" class="btn btn-stop" disabled>Zastavit</button>
     </div>
     
     <div class="volume-box">
@@ -182,9 +186,9 @@ playlistSelect.addEventListener('change', (e) => {
     let currentVolume = 0.8;
 
     let useRandomMode = false;
+    let isPlaying = false; // nový stav přehrávání
     // DOM Prvky
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
+    const playToggle = document.getElementById('playToggle');
     const nextBtn = document.getElementById('nextBtn');
     const toggleEditorBtn = document.getElementById('toggleEditorBtn');
     const editorContainer = document.getElementById('editorContainer');
@@ -286,7 +290,7 @@ function buildEditorUI() {
         rowHeader.appendChild(playBtn);
         const inputDesc = document.createElement('input');  
         inputDesc.type = 'text';  
-        inputDesc.className = 'input-text-desc';  
+        inputDesc.className = 'input-text-desc';
         inputDesc.placeholder = 'Doprovodný text...';  
         inputDesc.value = playlist[i].text;
         row.appendChild(rowHeader);  
@@ -426,7 +430,7 @@ alert("Chyba při ukládání na server.");
 .finally(() => {  
 savePlaylistBtn.disabled = false;  
 savePlaylistBtn.innerText = "Uložit a sdílet se všemi";  
-});  
+});
 });
 
 volumeSlider.addEventListener('input', (e) => {  
@@ -434,41 +438,58 @@ currentVolume = parseFloat(e.target.value);
 if (audio) audio.volume = currentVolume;  
 });
 
-startBtn.addEventListener('click', () => {  
-if (countdownInterval === null && audio === null) {  
-currentMinute = parseInt(minuteInput.value) || 1;  
-}  
-startBtn.disabled = true;  
-stopBtn.disabled = false;  
-nextBtn.disabled = false;  
-minuteInput.disabled = true;  
-toggleEditorBtn.disabled = true;
+// Toggle button behavior: start / stop as one
+playToggle.addEventListener('click', () => {
+    if (!isPlaying) {
+        // start playback
+        if (countdownInterval === null && audio === null) {
+            currentMinute = parseInt(minuteInput.value) || 1;
+        }
+        isPlaying = true;
+        playToggle.classList.add('playing');
+        playToggle.classList.remove('stopped');
+        playToggle.setAttribute('aria-pressed', 'true');
+        playToggle.textContent = 'Zastavit';
 
-playCurrentMinute();  
-countdownInterval = setInterval(tick, 250);  
+        nextBtn.disabled = false;
+        minuteInput.disabled = true;
+        toggleEditorBtn.disabled = true;
+
+        playCurrentMinute();
+        countdownInterval = setInterval(tick, 250);
+    } else {
+        // stop playback
+        stopPlayback();
+    }
 });
 
+function stopPlayback() {
+    // stop interval and audio
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
+    if (audio) audio.pause();
+
+    nextBtn.disabled = true;
+    minuteInput.disabled = false;
+    toggleEditorBtn.disabled = false;
+
+    localStorage.setItem(MINUTE_STORAGE_KEY, currentMinute);
+    statusDiv.innerText = "Přehrávání zastaveno";
+    countdownDiv.innerText = "Pauza";
+    updateNextFilePreview();
+
+    // update toggle UI
+    isPlaying = false;
+    playToggle.classList.remove('playing');
+    playToggle.classList.add('stopped');
+    playToggle.setAttribute('aria-pressed', 'false');
+    playToggle.textContent = 'Spustit přehrávání';
+}
+
+// replace previous next/start/stop wiring
 nextBtn.addEventListener('click', playCurrentMinute);
-
-function stopPlayback() {  
-startBtn.disabled = false;  
-stopBtn.disabled = true;  
-nextBtn.disabled = true;  
-minuteInput.disabled = false;  
-toggleEditorBtn.disabled = false;
-
-if (countdownInterval) {  
-clearInterval(countdownInterval);  
-countdownInterval = null;  
-}  
-if (audio) audio.pause();
-
-localStorage.setItem(MINUTE_STORAGE_KEY, currentMinute);  
-statusDiv.innerText = "Přehrávání zastaveno";  
-countdownDiv.innerText = "Pauza";  
-updateNextFilePreview();  
-}  
-stopBtn.addEventListener('click', stopPlayback);
 
 resetPositionBtn.addEventListener('click', () => {  
 if (countdownInterval !== null) stopPlayback();  
@@ -480,20 +501,6 @@ updateNextFilePreview();
 countdownDiv.innerText = "00:00";  
 progressBar.style.width = "0%";  
 });
-
-            
-
-
-    resetPositionBtn.addEventListener('click', () => {
-        if (countdownInterval !== null) stopPlayback();
-        localStorage.removeItem(MINUTE_STORAGE_KEY);
-        currentMinute = 1;
-        minuteInput.value = 1;
-        statusDiv.innerText = "Moje pozice resetována";
-        updateNextFilePreview();
-        countdownDiv.innerText = "00:00";
-        progressBar.style.width = "0%";
-    });
     async function saveMinuteToServer() {
         try {
             await fetch(`${PHP_SCRIPT_URL}?action=save_minute`, {

@@ -344,7 +344,8 @@ statusDiv.innerText = "Program dokončen";
 activityTextDiv.innerText = "Konec programu";  
 fileNameDiv.innerText = "Hodinový cyklus úspěšně skončil.";  
 countdownDiv.innerText = "00:00";  
-progressBar.style.width = "0%";  
+minuteIndicator.style.left = '0%';
+progressBar && (progressBar.style.width = "0%");
 currentMinute = 1;  
 minuteInput.value = 1;  
 localStorage.removeItem(MINUTE_STORAGE_KEY);  
@@ -369,7 +370,7 @@ if (currentFileName === "") {
 }
 
 // Zobrazení popisku velkým písmem na střed screenu  
-statusDiv.innerText = ` ${currentMinute}. min / 60`;  
+// statusDiv will be updated continuously in updateDisplay()
 activityTextDiv.innerText = currentText !== "" ? currentText : "- - -"; // Pokud text chybí, zobrazí se pomlčky  
 fileNameDiv.innerText = isUsingFallback ? `Zvuk: ${currentFileName} (Výchozí)` : `Zvuk: ${currentFileName}`;  
 minuteInput.value = currentMinute;
@@ -391,6 +392,9 @@ fileNameDiv.innerText = `Chyba: Soubor "${currentFileName}" chybí ve složce au
 targetEndTime = Date.now() + (MINUTE_DURATION_SEC * 1000);  
 secondsLeft = MINUTE_DURATION_SEC;
 
+// hide the small bottom countdown (we show seconds in status)
+if (countdownDiv) countdownDiv.style.display = 'none';
+
 updateDisplay();  
 currentMinute++;  
 }
@@ -409,9 +413,11 @@ updateDisplay();
 
 function updateDisplay() {  
 const displaySecVal = secondsLeft < 0 ? 0 : secondsLeft;  
-const displaySec = displaySecVal < 10 ? `0${displaySecVal}` : displaySecVal;  
-// show seconds with trailing slash (no total needed)
-countdownDiv.innerText = `00:${displaySec} /`;
+const displaySec = displaySecVal < 10 ? `0${displaySecVal}` : displaySecVal;
+
+// Move seconds number to statusDiv replacing static "60"
+const playingMinute = lastStartedMinute || (currentMinute > 1 ? currentMinute - 1 : 1);
+statusDiv.innerText = `${playingMinute}. min / ${displaySec}`;
 
 // update minute indicator position (elapsed seconds from 0..60)
 const elapsed = MINUTE_DURATION_SEC - (displaySecVal);
@@ -551,7 +557,8 @@ function stopPlayback() {
 
     localStorage.setItem(MINUTE_STORAGE_KEY, currentMinute);
     statusDiv.innerText = "Přehrávání zastaveno";
-    countdownDiv.innerText = "Pauza";
+    // show small countdown again with Pauza
+    if (countdownDiv) { countdownDiv.style.display = 'block'; countdownDiv.innerText = 'Pauza'; }
     updateNextFilePreview();
 
     // update toggle UI
@@ -572,8 +579,9 @@ currentMinute = 1;
 minuteInput.value = 1;  
 statusDiv.innerText = "Moje pozice resetována";  
 updateNextFilePreview();  
-countdownDiv.innerText = "00:00";  
-minuteIndicator.style.left = '0%';
+// reset indicator and show small countdown
+if (minuteIndicator) minuteIndicator.style.left = '0%';
+if (countdownDiv) { countdownDiv.style.display = 'block'; countdownDiv.innerText = '00:00'; }
 });
     async function saveMinuteToServer() {
         try {

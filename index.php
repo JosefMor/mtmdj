@@ -191,6 +191,7 @@ playlistSelect.addEventListener('change', (e) => {
 
     let useRandomMode = false;
     let isPlaying = false; // nový stav přehrávání
+    let lastStartedMinute = null; // pamatuje kterou minutu jsme naposledy spustili
     // DOM Prvky
     const playToggle = document.getElementById('playToggle');
     const backBtn = document.getElementById('backBtn');
@@ -208,6 +209,13 @@ playlistSelect.addEventListener('change', (e) => {
     const fileNameDiv = document.getElementById('fileName');
     const countdownDiv = document.getElementById('countdown');
     const progressBar = document.getElementById('progressBar');
+
+    // Back click tracking
+    let backClickCount = 0;
+    let backLastClickTime = 0;
+    let backBaseMinute = null;
+    let backResetTimer = null;
+    const BACK_THRESHOLD_MS = 500; // 0.5s
 
     window.addEventListener('DOMContentLoaded', async () => {
         const savedMinute = localStorage.getItem(MINUTE_STORAGE_KEY);
@@ -326,6 +334,9 @@ minuteInput.value = 1;
 localStorage.removeItem(MINUTE_STORAGE_KEY);  
 return;  
 }
+
+// zapamatuj si, kterou minutu startujeme (pro Back logiku)
+lastStartedMinute = currentMinute;
 
 let currentItem = playlist[currentMinute - 1];  
 let currentFileName = currentItem && currentItem.file ? currentItem.file.trim() : "";  
@@ -469,18 +480,39 @@ playToggle.addEventListener('click', () => {
     }
 });
 
-// Back button: restart current minute to its beginning
+// Back button: restart current minute on first click; quick multiple clicks go further back
 backBtn.addEventListener('click', () => {
-    if (!isPlaying) return;
-    // If audio exists, restart it to the beginning of the current minute
-    if (audio) {
-        try { audio.currentTime = 0; } catch (e) { console.warn('Cannot reset currentTime', e); }
-        audio.play().catch(() => {});
+    if (!isPlaying || lastStartedMinute === null) return;
+    const now = Date.now();
+    if (now - backLastClickTime <= BACK_THRESHOLD_MS) {
+        backClickCount++;
+    } else {
+        backClickCount = 1;
+        backBaseMinute = lastStartedMinute; // remember which minute sequence started from
     }
-    // reset timer for the full minute
-    targetEndTime = Date.now() + (MINUTE_DURATION_SEC * 1000);
-    secondsLeft = MINUTE_DURATION_SEC;
-    updateDisplay();
+    backLastClickTime = now;
+
+    // reset the click-count after threshold so new sequences start fresh
+    if (backResetTimer) clearTimeout(backResetTimer);
+    backResetTimer = setTimeout(() => { backClickCount = 0; backBaseMinute = null; }, BACK_THRESHOLD_MS + 50);
+
+    if (backClickCount === 1) {
+        // restart current minute
+        if (audio) {
+            try { audio.currentTime = 0; } catch (e) { console.warn('Cannot reset currentTime', e); }
+            audio.play().catch(() => {});
+        }
+        targetEndTime = Date.now() + (MINUTE_DURATION_SEC * 1000);
+        secondsLeft = MINUTE_DURATION_SEC;
+        updateDisplay();
+    } else {
+        // go back (backClickCount - 1) minutes from base
+        const stepsBack = backClickCount - 1;
+        const targetMinute = Math.max(1, backBaseMinute - stepsBack);
+        // set currentMinute to target and play it
+        currentMinute = targetMinute;
+        playCurrentMinute();
+    }
 });
 
 function stopPlayback() {

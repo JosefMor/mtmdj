@@ -96,6 +96,13 @@
     transition: background 0.2s;
 }
 .random-mode-label:hover { background: #2d3e56; }
+
+/* Jump minute container with select and button */
+.jump-minute-container { display: flex; gap: 10px; align-items: center; }
+.jump-minute-container select { flex: 1; }
+.btn-jump-minute { background-color: var(--primary); color: #000; padding: 8px 16px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.btn-jump-minute:hover { opacity: 0.9; }
+.btn-jump-minute:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 
 </head>
@@ -166,12 +173,15 @@
 
    </div>
 
-<!-- Nový listbox pro výběr minuty podle obsahu playlistu -->
+<!-- Nový listbox pro výběr minuty podle obsahu playlistu s tlačítkem -->
 <div class="setup-box">
-    <label for="minuteJumpSelect">Přejít na minutu (podle playlistu):</label>
-    <select id="minuteJumpSelect" class="select-audio">
-        <option value="" disabled selected>Vyber minutu...</option>
-    </select>
+    <label>Přejít na minutu (podle playlistu):</label>
+    <div class="jump-minute-container">
+        <select id="minuteJumpSelect" class="select-audio">
+            <option value="" disabled selected>Vyber minutu...</option>
+        </select>
+        <button id="jumpMinuteBtn" class="btn-jump-minute" disabled>Přejít</button>
+    </div>
 </div>
 
 <script>
@@ -230,6 +240,7 @@ playlistSelect.addEventListener('change', (e) => {
     const minuteIndicator = document.getElementById('minuteIndicator');
     const minuteProgress = document.getElementById('minuteProgress');
     const minuteJumpSelect = document.getElementById('minuteJumpSelect');
+    const jumpMinuteBtn = document.getElementById('jumpMinuteBtn');
 
     // Back click tracking
     let backClickCount = 0;
@@ -314,18 +325,33 @@ function populateMinuteJumpSelect() {
     }
 }
 
-// Přepni aktuální minutu při změně v novém selectu
+// Aktivuj tlačítko při výběru minuty v selectu
 minuteJumpSelect.addEventListener('change', (e) => {
-    const val = parseInt(e.target.value, 10);
+    const val = e.target.value;
+    if (val === '' || !isFinite(parseInt(val, 10))) {
+        jumpMinuteBtn.disabled = true;
+    } else {
+        jumpMinuteBtn.disabled = false;
+    }
+});
+
+// Tlačítko pro přechod na vybranou minutu
+jumpMinuteBtn.addEventListener('click', () => {
+    const val = parseInt(minuteJumpSelect.value, 10);
     if (!isFinite(val)) return;
+    
     minuteInput.value = val;
     currentMinute = val;
     updateNextFilePreview();
-    // pokud právě přehráváme, přejdeme okamžitě na zvolenou minutu
+    
+    // Pokud právě přehráváme, přejdeme na zvolenou minutu a začneme ji přehrávat
     if (isPlaying) {
-        // playCurrentMinute vezme currentMinute a potom inkrementuje
         playCurrentMinute();
     }
+    
+    // Resetuj select
+    minuteJumpSelect.value = '';
+    jumpMinuteBtn.disabled = true;
 });
 
 

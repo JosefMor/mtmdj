@@ -296,24 +296,24 @@ function loadPlaylistFromServer() {
         statusDiv.innerText = `Synchronizováno: ${currentPlaylistFileName}`;
         updateNextFilePreview();
         buildEditorUI();
-        populateMinuteJumpSelect();
+        populateMinuteJumpSelectOptions();
     });
 }
 
-// Nová funkce: naplní select minutami podle obsahu playlistu
-function populateMinuteJumpSelect() {
+// Funkce pro naplnění options v selectu - bez resetování
+function populateMinuteJumpSelectOptions() {
     if (!minuteJumpSelect) return;
     
-    // Uložit aktuální vybranou hodnotu před resetem obsahu
+    // Uložit aktuální vybranou hodnotu
     const currentSelection = minuteJumpSelect.value;
     
-    minuteJumpSelect.innerHTML = '';
-    const defaultOpt = document.createElement('option');
-    defaultOpt.value = '';
-    defaultOpt.innerText = 'Vyber minutu...';
-    defaultOpt.disabled = true;
-    minuteJumpSelect.appendChild(defaultOpt);
+    // Smazat všechny options kromě defaultní
+    const options = minuteJumpSelect.querySelectorAll('option');
+    options.forEach((opt, idx) => {
+        if (idx > 0) opt.remove(); // Ponechat jen první option (default)
+    });
 
+    // Přidat všechny nové options
     for (let i = 0; i < 60; i++) {
         const item = playlist[i] || { file: '', text: '' };
         const minuteNumber = i + 1;
@@ -322,19 +322,14 @@ function populateMinuteJumpSelect() {
         const option = document.createElement('option');
         option.value = String(minuteNumber);
         option.textContent = `${minuteNumber}. minuta — ${fileLabel} ${textLabel}`;
-        // zvýraznit ne-prázdné možnosti
         if (item.file) option.style.fontWeight = '700';
         minuteJumpSelect.appendChild(option);
     }
     
-    // Obnovit předchozí výběr, pokud byl validní
+    // Obnovit předchozí výběr, pokud byl
     if (currentSelection && currentSelection !== '') {
         minuteJumpSelect.value = currentSelection;
         jumpMinuteBtn.disabled = false;
-    } else {
-        minuteJumpSelect.value = '';
-        defaultOpt.selected = true;
-        jumpMinuteBtn.disabled = true;
     }
 }
 
@@ -362,11 +357,14 @@ jumpMinuteBtn.addEventListener('click', () => {
         playCurrentMinute();
     }
     
-    // Resetuj select na výchozí stav
+    // DŮLEŽITÉ: Resetuj select POUZE po stisku tlačítka
     minuteJumpSelect.value = '';
     jumpMinuteBtn.disabled = true;
-    // Nastav default option jako selected
-    minuteJumpSelect.querySelector('option[value=""]').selected = true;
+    // Zajisti, aby byla default option selected
+    const defaultOpt = minuteJumpSelect.querySelector('option[value=""]');
+    if (defaultOpt) {
+        defaultOpt.selected = true;
+    }
 });
 
 

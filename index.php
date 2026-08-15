@@ -303,12 +303,15 @@ function loadPlaylistFromServer() {
 // Nová funkce: naplní select minutami podle obsahu playlistu
 function populateMinuteJumpSelect() {
     if (!minuteJumpSelect) return;
+    
+    // Uložit aktuální vybranou hodnotu před resetem obsahu
+    const currentSelection = minuteJumpSelect.value;
+    
     minuteJumpSelect.innerHTML = '';
     const defaultOpt = document.createElement('option');
     defaultOpt.value = '';
     defaultOpt.innerText = 'Vyber minutu...';
     defaultOpt.disabled = true;
-    defaultOpt.selected = true;
     minuteJumpSelect.appendChild(defaultOpt);
 
     for (let i = 0; i < 60; i++) {
@@ -322,6 +325,16 @@ function populateMinuteJumpSelect() {
         // zvýraznit ne-prázdné možnosti
         if (item.file) option.style.fontWeight = '700';
         minuteJumpSelect.appendChild(option);
+    }
+    
+    // Obnovit předchozí výběr, pokud byl validní
+    if (currentSelection && currentSelection !== '') {
+        minuteJumpSelect.value = currentSelection;
+        jumpMinuteBtn.disabled = false;
+    } else {
+        minuteJumpSelect.value = '';
+        defaultOpt.selected = true;
+        jumpMinuteBtn.disabled = true;
     }
 }
 
@@ -349,9 +362,11 @@ jumpMinuteBtn.addEventListener('click', () => {
         playCurrentMinute();
     }
     
-    // Resetuj select
+    // Resetuj select na výchozí stav
     minuteJumpSelect.value = '';
     jumpMinuteBtn.disabled = true;
+    // Nastav default option jako selected
+    minuteJumpSelect.querySelector('option[value=""]').selected = true;
 });
 
 

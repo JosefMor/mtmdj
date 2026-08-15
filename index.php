@@ -72,7 +72,7 @@
         background: var(--primary); /* single color; switched in JS at thresholds */
         transition: width 0.2s linear, background-color 0.18s linear;
     }
-    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #ffffffcc; border: 2px solid rgba(0,0,0,0.4); box[...]
+    .minute-indicator { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #ffffffcc; border: 2px solid rgba(0,0,0,0.4); box-shadow: 0 0 8px rgba(255,255,255,0.6); }
 
     #countdown { font-size: 28px; color: var(--text-muted); margin-top: 6px; }
 
@@ -170,34 +170,7 @@
 <div class="setup-box">
     <label for="minuteJumpSelect">Přejít na minutu (podle playlistu):</label>
     <select id="minuteJumpSelect" class="select-audio">
-        <?php
-        // Server-side rendering of minute choices from playlist.txt so the list is available on first load.
-        $playlistFile = __DIR__ . '/playlist.txt';
-        if (file_exists($playlistFile)) {
-            $content = file_get_contents($playlistFile);
-            $lines = preg_split('/\r?\n/', trim($content));
-            // default disabled prompt
-            echo '<option value="" disabled selected>Vyber minutu...</option>' . "\n";
-            for ($i = 0; $i < 60; $i++) {
-                $line = isset($lines[$i]) ? $lines[$i] : '';
-                $file = '';
-                $text = '';
-                if ($line !== '') {
-                    $parts = explode('|', $line, 2);
-                    $file = trim($parts[0]);
-                    $text = isset($parts[1]) ? trim($parts[1]) : '';
-                }
-                $minuteNumber = $i + 1;
-                $fileLabel = $file !== '' ? htmlspecialchars($file, ENT_QUOTES | ENT_HTML5) : '(prázdné)';
-                $textLabel = $text !== '' ? ' | ' . htmlspecialchars($text, ENT_QUOTES | ENT_HTML5) : '';
-                $display = sprintf('%d. minuta — %s%s', $minuteNumber, $fileLabel, $textLabel);
-                $style = $file !== '' ? ' style="font-weight:700;"' : '';
-                echo sprintf('<option value="%d"%s>%s</option>\n', $minuteNumber, $style, $display);
-            }
-        } else {
-            echo '<option value="" disabled selected>playlist.txt nenalezen</option>' . "\n";
-        }
-        ?>
+        <option value="" disabled selected>Vyber minutu...</option>
     </select>
 </div>
 

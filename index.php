@@ -416,9 +416,8 @@ fileNameDiv.innerText = "Hodinový cyklus úspěšně skončil.";
 countdownDiv.innerText = "00:00";  
 if (minuteIndicator) minuteIndicator.style.left = '0%';
 if (minuteProgress) minuteProgress.style.width = '0%';
-currentMinute = 1;  
-minuteInput.value = 1;  
-localStorage.removeItem(MINUTE_STORAGE_KEY);  
+// Zůstane na poslední nastavené minutě - neuklízíme
+localStorage.setItem(MINUTE_STORAGE_KEY, currentMinute - 1);  
 return;  
 }
 
